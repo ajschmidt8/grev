@@ -1,0 +1,20 @@
+{
+  "name": "grev",
+  "version": "1.0.0",
+  "description": "This tool exists to simplify the review process at RB.",
+  "main": "grev.js",
+  "bin": "grev.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "AJ Schmidt",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.17.0",
+    "chalk": "^2.3.0",
+    "git-rev-sync": "^1.9.1",
+    "inquirer": "^3.3.0",
+    "parse-git-config": "^1.1.1",
+    "tmp": "^0.0.33"
+  }
+}
