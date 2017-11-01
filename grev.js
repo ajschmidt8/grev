@@ -11,9 +11,11 @@ const fs = require('fs');
 const getRepoName = require('git-repo-name');
 const _ = require('lodash');
 const fuzzy = require('fuzzy');
+const querystring = require('querystring');
 
 // Variable Setup
-// Shortcut for chalk logging
+let prLink;
+// Shortcut for chalk logging.
 const log = console.log;
 // username to use for absolute path to global .gitconfig file
 const osUsername = require("os").userInfo().username;
@@ -25,13 +27,17 @@ const gitConfig = parseGitConfig.sync({
 const jira = {
 	"self": gitConfig.jira.username,
 	"key": gitConfig.jira.key,
-	"inReviewId": 21,
+	"inReviewId": 111,
 	"relatedIssueId": 10003,
 };
 const github = {
 	"key": gitConfig.github.key,
 	"self": gitConfig.github.username,
 	"frontendTeamId": 2122156
+}
+const slack = {
+	"key": gitConfig.slack.key,
+	"prsChannelId": "G7SCGSSPK",
 }
 // Gets current branch name
 // const currentTask = git.branch();
@@ -52,6 +58,11 @@ const githubAPI = axios.create({
 		password: github.key,
 	},
 });
+// Axios instance for Slack API
+const slackAPI = axios.create({
+	baseURL: 'https://slack.com/api',
+	headers: {'Authorization': `Bearer ${slack.key}`},
+});
 // Temp file for markdown
 const tempFile = tmp.fileSync({
 	postfix: '.md',
@@ -59,7 +70,7 @@ const tempFile = tmp.fileSync({
 
 
 // Gets the options for who's fork to submit PR to
-const getForkData = () => {
+const getForksData = () => {
 	return Promise.all([
 		githubAPI.get(`/teams/${github.frontendTeamId}/members`),
 		githubAPI.get(`/repos/referralsolutionsgroup/${currentRepo}/forks`)
@@ -101,7 +112,26 @@ const searchForks = (input, forks) => {
 	});
 };
 
-getForkData()
+const getSlackUserInfo = (membersIdArray) => {
+	const slackUserInfoPromises = membersIdArray.map((memberId) => {
+		return slackAPI.post('/users.info', querystring.stringify({user: memberId}));
+	});
+	return Promise.all(slackUserInfoPromises);
+};
+
+const formatSlackMemberChoices = (membersInfoArray) => {
+	return membersInfoArray.map((memberInfo) => {
+		return {
+			name: memberInfo.user.profile.display_name,
+			value: memberInfo.user.id,
+		};
+	});
+};
+
+
+log(chalk.bold.underline('\nFollow the prompts to submit a PR.\n'))
+
+getForksData()
 .then(response => {
 	const frontendTeam = response[0].data;
 	const availableForks = response[1].data;
@@ -155,17 +185,12 @@ getForkData()
 
 	fs.writeFileSync(tempFile.name, `**Task:**\n\nhttps://recoverybrands.atlassian.net/browse/${currentTask}\n\n**Pages:**\n\n`);
 
-	log(chalk.green('Opening markdown file for PR body...'));
+	process.stdout.write(chalk.green('Editing markdown file...'));
 
 	execSync('atom --wait ' + tempFile.name);
 	const prBody = fs.readFileSync(tempFile.name, 'utf8');
-	log(prBody);
 
-	log(`/repos/${prUser}/${currentRepo}/pulls`);
-	log(prTitle);
-	log(prUser);
-	log(baseBranch);
-	log(`${github.self}:${currentTask}`);
+	log(chalk.green('DONE!'));
 
 	return githubAPI.post(`/repos/${prUser}/${currentRepo}/pulls`, {
 		title: prTitle,
@@ -175,5 +200,77 @@ getForkData()
 	});
 })
 .then(response => {
-	log(response);
+	prLink = response.data.html_url;
+
+	log(chalk.bold(`PR Submitted: `) + prLink);
+
+	return jiraAPI.post(`/issue/${currentTask}/comment`, {
+			body: `PR Link: ${prLink}`,
+		});
+})
+.then(response => {
+	return inquirer.prompt([{
+		type: 'list',
+		name: 'transitionToInReview',
+		message: 'Would you like to transition this task to "In Review"?',
+		choices: [
+			{
+				name: "Yes",
+				value: true,
+			},
+			{
+				name: "No",
+				value: false
+			},
+		]
+	}])
+
+})
+.then(response => {
+
+	if (!response.transitionToInReview) {
+		return;
+	}
+
+	return jiraAPI.post(`/issue/${currentTask}/transitions`, {
+		transition: {
+			id: jira.inReviewId
+		},
+	});
+})
+.then(response => {
+	return slackAPI.post('/conversations.members', querystring.stringify({channel: slack.prsChannelId}))
+})
+.then(response => {
+	return getSlackUserInfo(response.data.members);
+})
+.then(response => {
+	const membersInfoArray = response.map((response) => {
+		return response.data;
+	});
+
+	return formatSlackMemberChoices(membersInfoArray);
+})
+.then(response => {
+	return inquirer.prompt([{
+		type: 'checkbox',
+		name: 'slackNotifyees',
+		message: 'Choose the Slack users you would like to notify about your PR:',
+		choices: response,
+	}]);
+})
+.then(response => {
+	const slackNotifyeeTags = response.slackNotifyees.reduce((tagsString, currentId) => {
+		return tagsString + ` <@${currentId}>`;
+	}, '');
+	const slackMessage = `${prLink} ${slackNotifyeeTags}`;
+
+	return slackAPI.post('/chat.postMessage', querystring.stringify({
+		channel: slack.prsChannelId,
+		as_user: false,
+		username: 'PR Notifier',
+		icon_emoji: ':robot_face:',
+		text: slackMessage,
+	}))
+
 })
