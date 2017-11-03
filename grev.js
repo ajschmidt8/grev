@@ -14,7 +14,8 @@ const fuzzy = require('fuzzy');
 const querystring = require('querystring');
 
 // Variable Setup
-let prLink;
+let prUrlLink;
+let prOwnerRepo;
 // Shortcut for chalk logging.
 const log = console.log;
 // username to use for absolute path to global .gitconfig file
@@ -77,7 +78,7 @@ const getForksData = () => {
 	])
 }
 
-const filterForkChoices = (frontendTeam, availableForks) => {
+const formatForkChoices = (frontendTeam, availableForks) => {
 	const filteredFrontendTeam = frontendTeam.map((teamMember) => {
 		return teamMember.login
 	});
@@ -133,54 +134,44 @@ log(chalk.bold.underline('\nFollow the prompts to submit a PR.\n'))
 
 getForksData()
 .then(response => {
-	const frontendTeam = response[0].data;
-	const availableForks = response[1].data;
-	const formattedForks = filterForkChoices(frontendTeam, availableForks);
+	const frontendTeamMembers = response[0].data;
+	const haveForkedMembers = response[1].data;
+	const formattedForkChoices = formatForkChoices(frontendTeamMembers, haveForkedMembers);
 
 	return inquirer.prompt({
 		type: 'autocomplete',
 		name: 'prUserSelection',
 		message: 'Choose whose repo you would like to submit the PR to:',
-		source: (answers, input) => Promise.resolve().then(() => searchForks(input, formattedForks)),
+		source: (answers, input) => Promise.resolve().then(() => searchForks(input, formattedForkChoices)),
 	})
 })
 .then(response => {
-	const prUser = response.prUserSelection;
-	return Promise.all([
-		githubAPI.get(`/repos/${prUser}/${currentRepo}/branches`),
-		prUser
-	]);
+	prOwnerRepo = response.prUserSelection;
+	return githubAPI.get(`/repos/${prOwnerRepo}/${currentRepo}/branches`),
 })
 .then(response => {
-	const prUser = response[1];
-	const formattedBranches = response[0].data.map((branch) => {
+	const prOwnersBranches = response.data.map((branch) => {
 		return branch.name;
 	});
 
-
-	return Promise.all([
-		inquirer.prompt({
-			type: 'autocomplete',
-			name: 'baseBranch',
-			message: 'Choose a base branch:',
-			source: (answers, input) => Promise.resolve().then(() => searchBranches(input, formattedBranches)),
-		}),
-		prUser
-	]);
+	return inquirer.prompt({
+		type: 'autocomplete',
+		name: 'prOwnerBaseBranch',
+		message: 'Choose a base branch:',
+		source: (answers, input) => Promise.resolve().then(() => searchBranches(input, prOwnersBranches)),
+	});
 })
 .then(response => {
-	const baseBranch = response[0].baseBranch;
-	const prUser = response[1];
+	const prOwnerBaseBranch = response[0].prOwnerBaseBranch;
+
 	return Promise.all([
-		baseBranch,
-		prUser,
+		prOwnerBaseBranch,
 		jiraAPI.get(`/issue/${currentTask}/?fields=status,issuelinks,summary`)
 	])
 })
 .then(response => {
-	const baseBranch = response[0];
-	const prUser = response[1];
-	const taskTitle = response[2].data.fields.summary;
+	const prOwnerBaseBranch = response[0];
+	const taskTitle = response[1].data.fields.summary;
 	const prTitle = `[${currentTask}] - ${taskTitle}`;
 
 	fs.writeFileSync(tempFile.name, `**Task:**\n\nhttps://recoverybrands.atlassian.net/browse/${currentTask}\n\n**Pages:**\n\n`);
@@ -192,20 +183,20 @@ getForksData()
 
 	log(chalk.green('DONE!'));
 
-	return githubAPI.post(`/repos/${prUser}/${currentRepo}/pulls`, {
+	return githubAPI.post(`/repos/${prOwnerRepo}/${currentRepo}/pulls`, {
 		title: prTitle,
 		body: prBody,
 		head: `${github.self}:${currentTask}`,
-		base: baseBranch
+		base: prOwnerBaseBranch
 	});
 })
 .then(response => {
-	prLink = response.data.html_url;
+	prUrlLink = response.data.html_url;
 
-	log(chalk.bold(`PR Submitted: `) + prLink);
+	log(chalk.bold(`PR Submitted: `) + prUrlLink);
 
 	return jiraAPI.post(`/issue/${currentTask}/comment`, {
-			body: `PR Link: ${prLink}`,
+			body: `PR Link: ${prUrlLink}`,
 		});
 })
 .then(response => {
@@ -263,7 +254,7 @@ getForksData()
 	const slackNotifyeeTags = response.slackNotifyees.reduce((tagsString, currentId) => {
 		return tagsString + ` <@${currentId}>`;
 	}, '');
-	const slackMessage = `${prLink} ${slackNotifyeeTags}`;
+	const slackMessage = `${prUrlLink} ${slackNotifyeeTags}`;
 
 	return slackAPI.post('/chat.postMessage', querystring.stringify({
 		channel: slack.prsChannelId,
@@ -272,5 +263,4 @@ getForksData()
 		icon_emoji: ':robot_face:',
 		text: slackMessage,
 	}))
-
 })
