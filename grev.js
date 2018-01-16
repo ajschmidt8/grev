@@ -1,5 +1,4 @@
 // Imports
-const git = require('git-rev-sync');
 
 const chalk = require('chalk');
 const inquirer = require('inquirer');
@@ -11,6 +10,8 @@ const getRepoName = require('git-repo-name');
 const _ = require('lodash');
 const fuzzy = require('fuzzy');
 const querystring = require('querystring');
+const apis = require('./endpoints');
+const config = require('./config');
 
 // Variable Setup
 let prUrlLink;
@@ -19,14 +20,11 @@ let prOwnerRepo;
 const log = console.log;
 
 // Gets current branch name
-const currentTask = git.branch();
+const currentTask = require('git-rev-sync').branch();
 // const currentTask = 'REH-317';
 // Repo name
 const repo = getRepoName.sync();
 // const currentRepo = 'rehabs-com';
-
-const apis = require('./endpoints');
-
 
 // Temp file for markdown
 const tempFile = tmp.fileSync({
@@ -37,7 +35,7 @@ const tempFile = tmp.fileSync({
 // Gets the options for who's fork to submit PR to
 const getForksData = () => {
 	return Promise.all([
-		apis.github.get(`/teams/${github.frontendTeamId}/members`),
+		apis.github.get(`/teams/${config.github.frontendTeamId}/members`),
 		apis.github.get(`/repos/referralsolutionsgroup/${currentRepo}/forks`)
 	])
 }
@@ -150,7 +148,7 @@ getForksData()
 	return apis.github.post(`/repos/${prOwnerRepo}/${currentRepo}/pulls`, {
 		title: prTitle,
 		body: prBody,
-		head: `${github.self}:${currentTask}`,
+		head: `${config.github.self}:${currentTask}`,
 		base: prOwnerBaseBranch
 	});
 })
@@ -189,12 +187,12 @@ getForksData()
 
 	return apis.jira.post(`/issue/${currentTask}/transitions`, {
 		transition: {
-			id: jira.inReviewId
+			id: config.jira.inReviewId
 		},
 	});
 })
 .then(response => {
-	return apis.slack.post('/conversations.members', querystring.stringify({channel: slack.prsChannelId}))
+	return apis.slack.post('/conversations.members', querystring.stringify({channel: config.slack.prsChannelId}))
 })
 .then(response => {
 	return getSlackUserInfo(response.data.members);
@@ -221,7 +219,7 @@ getForksData()
 	const slackMessage = `${prUrlLink} ${slackNotifyeeTags}`;
 
 	return apis.slack.post('/chat.postMessage', querystring.stringify({
-		channel: slack.prsChannelId,
+		channel: config.slack.prsChannelId,
 		as_user: false,
 		username: 'PR Notifier',
 		icon_emoji: ':robot_face:',

@@ -28,7 +28,6 @@ class Config {
 			"prsChannelId": "G7SCGSSPK",
 		}
 	}
-
 }
 
 module.exports = new Config();
