@@ -1,5 +1,4 @@
 // Imports
-
 const chalk = require('chalk');
 const inquirer = require('inquirer');
 inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'));
@@ -7,104 +6,39 @@ const tmp = require('tmp');
 const { execSync } = require('child_process');
 const fs = require('fs');
 const getRepoName = require('git-repo-name');
-const _ = require('lodash');
-const fuzzy = require('fuzzy');
 const querystring = require('querystring');
 const apis = require('./endpoints');
 const config = require('./config');
+const helpers = require('./helpers');
 
 // Variable Setup
 let prUrlLink;
 let prOwnerRepo;
 // Shortcut for chalk logging.
 const log = console.log;
-
 // Gets current branch name
 const currentTask = require('git-rev-sync').branch();
-// const currentTask = 'REH-317';
 // Repo name
-const repo = getRepoName.sync();
-// const currentRepo = 'rehabs-com';
-
+const currentRepo = getRepoName.sync();
 // Temp file for markdown
 const tempFile = tmp.fileSync({
 	postfix: '.md',
 });
 
 
-// Gets the options for who's fork to submit PR to
-const getForksData = () => {
-	return Promise.all([
-		apis.github.get(`/teams/${config.github.frontendTeamId}/members`),
-		apis.github.get(`/repos/referralsolutionsgroup/${currentRepo}/forks`)
-	])
-}
-
-const formatForkChoices = (frontendTeam, availableForks) => {
-	const filteredFrontendTeam = frontendTeam.map((teamMember) => {
-		return teamMember.login
-	});
-	const filteredAvailableForks = availableForks.map((fork) => {
-		return fork.owner.login
-	});
-
-	const filteredForkChoices = _.intersection(filteredFrontendTeam, filteredAvailableForks).sort();
-	filteredForkChoices.unshift('referralsolutionsgroup');
-
-	return filteredForkChoices;
-};
-
-
-const searchBranches = (input, branches) => {
-	input = input || '';
-	return new Promise(function(resolve) {
-			const fuzzyResult = fuzzy.filter(input, branches);
-			resolve(fuzzyResult.map(function(el) {
-			return el.original;
-		}));
-	});
-};
-
-const searchForks = (input, forks) => {
-	input = input || '';
-	return new Promise(function(resolve) {
-			const fuzzyResult = fuzzy.filter(input, forks);
-			resolve(fuzzyResult.map(function(el) {
-			return el.original;
-		}));
-	});
-};
-
-const getSlackUserInfo = (membersIdArray) => {
-	const slackUserInfoPromises = membersIdArray.map((memberId) => {
-		return apis.slack.post('/users.info', querystring.stringify({user: memberId}));
-	});
-	return Promise.all(slackUserInfoPromises);
-};
-
-const formatSlackMemberChoices = (membersInfoArray) => {
-	return membersInfoArray.map((memberInfo) => {
-		return {
-			name: memberInfo.user.profile.display_name,
-			value: memberInfo.user.id,
-		};
-	});
-};
-
-
 log(chalk.bold.underline('\nFollow the prompts to submit a PR.\n'))
 
-getForksData()
+helpers.getForksData(currentRepo)
 .then(response => {
 	const frontendTeamMembers = response[0].data;
 	const haveForkedMembers = response[1].data;
-	const formattedForkChoices = formatForkChoices(frontendTeamMembers, haveForkedMembers);
+	const formattedForkChoices = helpers.formatForkChoices(frontendTeamMembers, haveForkedMembers);
 
 	return inquirer.prompt({
 		type: 'autocomplete',
 		name: 'prUserSelection',
 		message: 'Choose whose repo you would like to submit the PR to:',
-		source: (answers, input) => Promise.resolve().then(() => searchForks(input, formattedForkChoices)),
+		source: (answers, input) => Promise.resolve().then(() => helpers.searchForks(input, formattedForkChoices)),
 	})
 })
 .then(response => {
@@ -120,7 +54,7 @@ getForksData()
 		type: 'autocomplete',
 		name: 'prOwnerBaseBranch',
 		message: 'Choose a base branch:',
-		source: (answers, input) => Promise.resolve().then(() => searchBranches(input, prOwnersBranches)),
+		source: (answers, input) => Promise.resolve().then(() => helpers.searchBranches(input, prOwnersBranches)),
 	});
 })
 .then(response => {
@@ -195,14 +129,14 @@ getForksData()
 	return apis.slack.post('/conversations.members', querystring.stringify({channel: config.slack.prsChannelId}))
 })
 .then(response => {
-	return getSlackUserInfo(response.data.members);
+	return helpers.getSlackUserInfo(response.data.members);
 })
 .then(response => {
 	const membersInfoArray = response.map((response) => {
 		return response.data;
 	});
 
-	return formatSlackMemberChoices(membersInfoArray);
+	return helpers.formatSlackMemberChoices(membersInfoArray);
 })
 .then(response => {
 	return inquirer.prompt([{
@@ -225,4 +159,4 @@ getForksData()
 		icon_emoji: ':robot_face:',
 		text: slackMessage,
 	}))
-})
+});

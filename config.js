@@ -8,26 +8,24 @@ const gitConfig = parseGitConfig.sync({
 	path: `/Users/${osUsername}/.gitconfig`,
 });
 
-class Config {
-	constructor() {
-		this.jira = {
-			"self": gitConfig.jira.username,
-			"key": gitConfig.jira.key,
-			"inReviewId": 111,
-			"relatedIssueId": 10003,
-		};
+const config = {
+	"jira": {
+		"self": gitConfig.jira.username,
+		"key": gitConfig.jira.key,
+		"inReviewId": 111,
+		"relatedIssueId": 10003,
+	},
 
-		this.github = {
-			"key": gitConfig.github.key,
-			"self": gitConfig.github.username,
-			"frontendTeamId": 2122156
-		}
+	"github": {
+		"key": gitConfig.github.key,
+		"self": gitConfig.github.username,
+		"frontendTeamId": 2122156
+	},
 
-		this.slack = {
-			"key": gitConfig.slack.key,
-			"prsChannelId": "G7SCGSSPK",
-		}
+	"slack": {
+		"key": gitConfig.slack.key,
+		"prsChannelId": "G7SCGSSPK",
 	}
-}
+};
 
-module.exports = new Config();
+module.exports = config;
