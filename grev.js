@@ -1,7 +1,6 @@
 // Imports
-const parseGitConfig = require('parse-git-config');
 const git = require('git-rev-sync');
-const axios = require('axios');
+
 const chalk = require('chalk');
 const inquirer = require('inquirer');
 inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'));
@@ -18,52 +17,17 @@ let prUrlLink;
 let prOwnerRepo;
 // Shortcut for chalk logging.
 const log = console.log;
-// username to use for absolute path to global .gitconfig file
-const osUsername = require("os").userInfo().username;
-// Parses global .gitconfig file
-const gitConfig = parseGitConfig.sync({
-	path: `/Users/${osUsername}/.gitconfig`,
-});
-// Sets up JIRA related variables
-const jira = {
-	"self": gitConfig.jira.username,
-	"key": gitConfig.jira.key,
-	"inReviewId": 111,
-	"relatedIssueId": 10003,
-};
-const github = {
-	"key": gitConfig.github.key,
-	"self": gitConfig.github.username,
-	"frontendTeamId": 2122156
-}
-const slack = {
-	"key": gitConfig.slack.key,
-	"prsChannelId": "G7SCGSSPK",
-}
+
 // Gets current branch name
-// const currentTask = git.branch();
-const currentTask = 'REH-317';
+const currentTask = git.branch();
+// const currentTask = 'REH-317';
 // Repo name
-// const repo = getRepoName.sync();
-const currentRepo = 'rehabs-com';
-// Axios instance for JIRA API
-const jiraAPI = axios.create({
-	baseURL: 'https://recoverybrands.atlassian.net/rest/api/2',
-	headers: {'Authorization': `Basic ${jira.key}`},
-});
-// Axios instance for GitHub API
-const githubAPI = axios.create({
-	baseURL: 'https://api.github.com',
-	auth: {
-		username: github.self,
-		password: github.key,
-	},
-});
-// Axios instance for Slack API
-const slackAPI = axios.create({
-	baseURL: 'https://slack.com/api',
-	headers: {'Authorization': `Bearer ${slack.key}`},
-});
+const repo = getRepoName.sync();
+// const currentRepo = 'rehabs-com';
+
+const apis = require('./endpoints');
+
+
 // Temp file for markdown
 const tempFile = tmp.fileSync({
 	postfix: '.md',
@@ -73,8 +37,8 @@ const tempFile = tmp.fileSync({
 // Gets the options for who's fork to submit PR to
 const getForksData = () => {
 	return Promise.all([
-		githubAPI.get(`/teams/${github.frontendTeamId}/members`),
-		githubAPI.get(`/repos/referralsolutionsgroup/${currentRepo}/forks`)
+		apis.github.get(`/teams/${github.frontendTeamId}/members`),
+		apis.github.get(`/repos/referralsolutionsgroup/${currentRepo}/forks`)
 	])
 }
 
@@ -115,7 +79,7 @@ const searchForks = (input, forks) => {
 
 const getSlackUserInfo = (membersIdArray) => {
 	const slackUserInfoPromises = membersIdArray.map((memberId) => {
-		return slackAPI.post('/users.info', querystring.stringify({user: memberId}));
+		return apis.slack.post('/users.info', querystring.stringify({user: memberId}));
 	});
 	return Promise.all(slackUserInfoPromises);
 };
@@ -147,7 +111,7 @@ getForksData()
 })
 .then(response => {
 	prOwnerRepo = response.prUserSelection;
-	return githubAPI.get(`/repos/${prOwnerRepo}/${currentRepo}/branches`),
+	return apis.github.get(`/repos/${prOwnerRepo}/${currentRepo}/branches`);
 })
 .then(response => {
 	const prOwnersBranches = response.data.map((branch) => {
@@ -166,7 +130,7 @@ getForksData()
 
 	return Promise.all([
 		prOwnerBaseBranch,
-		jiraAPI.get(`/issue/${currentTask}/?fields=status,issuelinks,summary`)
+		apis.jira.get(`/issue/${currentTask}/?fields=status,issuelinks,summary`)
 	])
 })
 .then(response => {
@@ -183,7 +147,7 @@ getForksData()
 
 	log(chalk.green('DONE!'));
 
-	return githubAPI.post(`/repos/${prOwnerRepo}/${currentRepo}/pulls`, {
+	return apis.github.post(`/repos/${prOwnerRepo}/${currentRepo}/pulls`, {
 		title: prTitle,
 		body: prBody,
 		head: `${github.self}:${currentTask}`,
@@ -195,7 +159,7 @@ getForksData()
 
 	log(chalk.bold(`PR Submitted: `) + prUrlLink);
 
-	return jiraAPI.post(`/issue/${currentTask}/comment`, {
+	return apis.jira.post(`/issue/${currentTask}/comment`, {
 			body: `PR Link: ${prUrlLink}`,
 		});
 })
@@ -223,14 +187,14 @@ getForksData()
 		return;
 	}
 
-	return jiraAPI.post(`/issue/${currentTask}/transitions`, {
+	return apis.jira.post(`/issue/${currentTask}/transitions`, {
 		transition: {
 			id: jira.inReviewId
 		},
 	});
 })
 .then(response => {
-	return slackAPI.post('/conversations.members', querystring.stringify({channel: slack.prsChannelId}))
+	return apis.slack.post('/conversations.members', querystring.stringify({channel: slack.prsChannelId}))
 })
 .then(response => {
 	return getSlackUserInfo(response.data.members);
@@ -256,7 +220,7 @@ getForksData()
 	}, '');
 	const slackMessage = `${prUrlLink} ${slackNotifyeeTags}`;
 
-	return slackAPI.post('/chat.postMessage', querystring.stringify({
+	return apis.slack.post('/chat.postMessage', querystring.stringify({
 		channel: slack.prsChannelId,
 		as_user: false,
 		username: 'PR Notifier',
