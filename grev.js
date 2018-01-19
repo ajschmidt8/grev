@@ -7,8 +7,8 @@ inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'))
 const tmp = require('tmp');
 const { execSync } = require('child_process');
 const fs = require('fs');
-const getRepoName = require('git-repo-name');
 const querystring = require('querystring');
+const remoteOriginUrl = require('git-remote-origin-url');
 const apis = require('./endpoints');
 const config = require('./config');
 const helpers = require('./helpers');
@@ -16,21 +16,29 @@ const helpers = require('./helpers');
 // Variable Setup
 let prUrlLink;
 let prOwnerRepo;
+let currentRepo;
+const executionPath = process.cwd();
 // Shortcut for chalk logging.
 const log = console.log;
 // Gets current branch name
-const currentTask = require('git-rev-sync').branch();
-// Repo name
-const currentRepo = getRepoName.sync();
+const currentTask = require('git-rev-sync').branch(executionPath);
 // Temp file for markdown
 const tempFile = tmp.fileSync({
 	postfix: '.md',
 });
 
 
-log(chalk.bold.underline('\nFollow the prompts to submit a PR.\n'))
+log(chalk.bold.underline('\nFollow the prompts to submit a Pull Request.\n'))
 
-helpers.getForksData(currentRepo)
+remoteOriginUrl(executionPath)
+.then((url) => {
+	currentRepo = helpers.getRepoName(url);
+
+	return Promise.all([
+		apis.github.get(`/teams/${config.github.frontendTeamId}/members`),
+		apis.github.get(`/repos/referralsolutionsgroup/${currentRepo}/forks`)
+	]);
+})
 .then(response => {
 	const frontendTeamMembers = response[0].data;
 	const haveForkedMembers = response[1].data;
@@ -60,7 +68,7 @@ helpers.getForksData(currentRepo)
 	});
 })
 .then(response => {
-	const prOwnerBaseBranch = response[0].prOwnerBaseBranch;
+	const prOwnerBaseBranch = response.prOwnerBaseBranch;
 
 	return Promise.all([
 		prOwnerBaseBranch,
@@ -161,4 +169,8 @@ helpers.getForksData(currentRepo)
 		icon_emoji: ':robot_face:',
 		text: slackMessage,
 	}))
+})
+.catch((err) => {
+	log(err);
+	log(err.response.data);
 });

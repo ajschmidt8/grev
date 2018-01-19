@@ -12,7 +12,7 @@ const config = {
 	"jira": {
 		"self": gitConfig.jira.username,
 		"key": gitConfig.jira.key,
-		"inReviewId": 111,
+		"inReviewId": 51,
 		"relatedIssueId": 10003,
 	},
 
