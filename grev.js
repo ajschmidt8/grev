@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // Imports
 const chalk = require('chalk');
 const inquirer = require('inquirer');
