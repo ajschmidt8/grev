@@ -9,6 +9,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const querystring = require('querystring');
 const remoteOriginUrl = require('git-remote-origin-url');
+const opn = require('opn');
 const apis = require('./endpoints');
 const config = require('./config');
 const helpers = require('./helpers');
@@ -17,6 +18,7 @@ const helpers = require('./helpers');
 let prUrlLink;
 let prOwnerRepo;
 let currentRepo;
+let baseBranch;
 const executionPath = process.cwd();
 // Shortcut for chalk logging.
 const log = console.log;
@@ -62,29 +64,42 @@ remoteOriginUrl(executionPath)
 
 	return inquirer.prompt({
 		type: 'autocomplete',
-		name: 'prOwnerBaseBranch',
+		name: 'baseBranch',
 		message: 'Choose a base branch:',
 		source: (answers, input) => Promise.resolve().then(() => helpers.searchBranches(input, prOwnersBranches)),
 	});
 })
-.then(response => {
-	const prOwnerBaseBranch = response.prOwnerBaseBranch;
+.then((response) => {
+	baseBranch = response.baseBranch;
 
-	return Promise.all([
-		prOwnerBaseBranch,
-		apis.jira.get(`/issue/${currentTask}/?fields=status,issuelinks,summary`)
-	])
+	log(chalk.green('Opening browser to compare changes...'));
+	opn(`https://github.com/${prOwnerRepo}/${currentRepo}/compare/${baseBranch}...${config.github.self}:${currentTask}`, {wait: false});
+
+	return inquirer.prompt({
+			type: 'list',
+			name: 'continuePR',
+			message: 'Would you like to continue with the PR process?',
+			choices: helpers.yesNo
+		});
+})
+.then((response) => {
+	if (!response.continuePR) {
+		process.exit();
+	}
+	return;
 })
 .then(response => {
-	const prOwnerBaseBranch = response[0];
-	const taskTitle = response[1].data.fields.summary;
+	return apis.jira.get(`/issue/${currentTask}/?fields=status,issuelinks,summary`);
+})
+.then(response => {
+	const taskTitle = response.data.fields.summary;
 	const prTitle = `[${currentTask}] - ${taskTitle}`;
 
 	fs.writeFileSync(tempFile.name, `**Task:**\n\nhttps://recoverybrands.atlassian.net/browse/${currentTask}\n\n**Pages:**\n\n`);
 
 	process.stdout.write(chalk.green('Editing markdown file...'));
 
-	execSync('atom --wait ' + tempFile.name);
+	execSync(`${config.github.editor} ${tempFile.name}`);
 	const prBody = fs.readFileSync(tempFile.name, 'utf8');
 
 	log(chalk.green('DONE!'));
@@ -93,7 +108,7 @@ remoteOriginUrl(executionPath)
 		title: prTitle,
 		body: prBody,
 		head: `${config.github.self}:${currentTask}`,
-		base: prOwnerBaseBranch
+		base: baseBranch
 	});
 })
 .then(response => {
@@ -110,17 +125,8 @@ remoteOriginUrl(executionPath)
 		type: 'list',
 		name: 'transitionToInReview',
 		message: 'Would you like to transition this task to "In Review"?',
-		choices: [
-			{
-				name: "Yes",
-				value: true,
-			},
-			{
-				name: "No",
-				value: false
-			},
-		]
-	}])
+		choices: helpers.yesNo
+	}]);
 
 })
 .then(response => {
@@ -168,9 +174,8 @@ remoteOriginUrl(executionPath)
 		username: 'PR Notifier',
 		icon_emoji: ':robot_face:',
 		text: slackMessage,
-	}))
+	}));
 })
 .catch((err) => {
-	log(err);
-	log(err.response.data);
+	throw err;
 });

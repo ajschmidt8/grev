@@ -19,7 +19,8 @@ const config = {
 	"github": {
 		"key": gitConfig.github.key,
 		"self": gitConfig.github.username,
-		"frontendTeamId": 2122156
+		"editor": gitConfig.core.editor,
+		"frontendTeamId": 2122156,
 	},
 
 	"slack": {

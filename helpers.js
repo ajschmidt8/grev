@@ -63,7 +63,18 @@ const helpers = {
 				value: memberInfo.user.id,
 			};
 		});
-	}
+	},
+
+	"yesNo": [
+		{
+			name: "Yes",
+			value: true,
+		},
+		{
+			name: "No",
+			value: false
+		},
+	]
 };
 
 module.exports = helpers;

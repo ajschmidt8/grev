@@ -32,6 +32,7 @@
 		"inquirer": "^3.3.0",
 		"inquirer-autocomplete-prompt": "^0.11.1",
 		"lodash.intersection": "^4.4.0",
+		"opn": "^5.2.0",
 		"parse-git-config": "^1.1.1",
 		"tmp": "^0.0.33",
 		"url": "^0.11.0"
