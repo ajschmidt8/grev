@@ -1,14 +1,18 @@
+#!/usr/bin/env node
+
+const path = require('path');
 const apis = require('./endpoints');
 const intersection = require('lodash.intersection');
 const fuzzy = require('fuzzy');
 const querystring = require('querystring');
+const url = require('url');
+const filename = require('file-name');
 
 const helpers = {
-	"getForksData": (currentRepo) => {
-		return Promise.all([
-			apis.github.get(`/teams/${config.github.frontendTeamId}/members`),
-			apis.github.get(`/repos/referralsolutionsgroup/${currentRepo}/forks`)
-		])
+	"getRepoName": (gitRemoteUrl) => {
+		const parsed = url.parse(gitRemoteUrl);
+		const segments = parsed.pathname.split(path.sep);
+		return filename(segments.pop());
 	},
 
 	"formatForkChoices": (frontendTeam, availableForks) => {
@@ -59,7 +63,18 @@ const helpers = {
 				value: memberInfo.user.id,
 			};
 		});
-	}
+	},
+
+	"yesNo": [
+		{
+			name: "Yes",
+			value: true,
+		},
+		{
+			name: "No",
+			value: false
+		},
+	]
 };
 
 module.exports = helpers;

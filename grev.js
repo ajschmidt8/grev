@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // Imports
 const chalk = require('chalk');
 const inquirer = require('inquirer');
@@ -5,8 +7,9 @@ inquirer.registerPrompt('autocomplete', require('inquirer-autocomplete-prompt'))
 const tmp = require('tmp');
 const { execSync } = require('child_process');
 const fs = require('fs');
-const getRepoName = require('git-repo-name');
 const querystring = require('querystring');
+const remoteOriginUrl = require('git-remote-origin-url');
+const opn = require('opn');
 const apis = require('./endpoints');
 const config = require('./config');
 const helpers = require('./helpers');
@@ -14,21 +17,30 @@ const helpers = require('./helpers');
 // Variable Setup
 let prUrlLink;
 let prOwnerRepo;
+let currentRepo;
+let baseBranch;
+const executionPath = process.cwd();
 // Shortcut for chalk logging.
 const log = console.log;
 // Gets current branch name
-const currentTask = require('git-rev-sync').branch();
-// Repo name
-const currentRepo = getRepoName.sync();
+const currentTask = require('git-rev-sync').branch(executionPath);
 // Temp file for markdown
 const tempFile = tmp.fileSync({
 	postfix: '.md',
 });
 
 
-log(chalk.bold.underline('\nFollow the prompts to submit a PR.\n'))
+log(chalk.bold.underline('\nFollow the prompts to submit a Pull Request.\n'))
 
-helpers.getForksData(currentRepo)
+remoteOriginUrl(executionPath)
+.then((url) => {
+	currentRepo = helpers.getRepoName(url);
+
+	return Promise.all([
+		apis.github.get(`/teams/${config.github.frontendTeamId}/members`),
+		apis.github.get(`/repos/referralsolutionsgroup/${currentRepo}/forks`)
+	]);
+})
 .then(response => {
 	const frontendTeamMembers = response[0].data;
 	const haveForkedMembers = response[1].data;
@@ -52,29 +64,42 @@ helpers.getForksData(currentRepo)
 
 	return inquirer.prompt({
 		type: 'autocomplete',
-		name: 'prOwnerBaseBranch',
+		name: 'baseBranch',
 		message: 'Choose a base branch:',
 		source: (answers, input) => Promise.resolve().then(() => helpers.searchBranches(input, prOwnersBranches)),
 	});
 })
-.then(response => {
-	const prOwnerBaseBranch = response[0].prOwnerBaseBranch;
+.then((response) => {
+	baseBranch = response.baseBranch;
 
-	return Promise.all([
-		prOwnerBaseBranch,
-		apis.jira.get(`/issue/${currentTask}/?fields=status,issuelinks,summary`)
-	])
+	log(chalk.green('Opening browser to compare changes...'));
+	opn(`https://github.com/${prOwnerRepo}/${currentRepo}/compare/${baseBranch}...${config.github.self}:${currentTask}`, {wait: false});
+
+	return inquirer.prompt({
+			type: 'list',
+			name: 'continuePR',
+			message: 'Would you like to continue with the PR process?',
+			choices: helpers.yesNo
+		});
+})
+.then((response) => {
+	if (!response.continuePR) {
+		process.exit();
+	}
+	return;
 })
 .then(response => {
-	const prOwnerBaseBranch = response[0];
-	const taskTitle = response[1].data.fields.summary;
+	return apis.jira.get(`/issue/${currentTask}/?fields=status,issuelinks,summary`);
+})
+.then(response => {
+	const taskTitle = response.data.fields.summary;
 	const prTitle = `[${currentTask}] - ${taskTitle}`;
 
 	fs.writeFileSync(tempFile.name, `**Task:**\n\nhttps://recoverybrands.atlassian.net/browse/${currentTask}\n\n**Pages:**\n\n`);
 
 	process.stdout.write(chalk.green('Editing markdown file...'));
 
-	execSync('atom --wait ' + tempFile.name);
+	execSync(`${config.github.editor} ${tempFile.name}`);
 	const prBody = fs.readFileSync(tempFile.name, 'utf8');
 
 	log(chalk.green('DONE!'));
@@ -83,7 +108,7 @@ helpers.getForksData(currentRepo)
 		title: prTitle,
 		body: prBody,
 		head: `${config.github.self}:${currentTask}`,
-		base: prOwnerBaseBranch
+		base: baseBranch
 	});
 })
 .then(response => {
@@ -100,17 +125,8 @@ helpers.getForksData(currentRepo)
 		type: 'list',
 		name: 'transitionToInReview',
 		message: 'Would you like to transition this task to "In Review"?',
-		choices: [
-			{
-				name: "Yes",
-				value: true,
-			},
-			{
-				name: "No",
-				value: false
-			},
-		]
-	}])
+		choices: helpers.yesNo
+	}]);
 
 })
 .then(response => {
@@ -158,5 +174,8 @@ helpers.getForksData(currentRepo)
 		username: 'PR Notifier',
 		icon_emoji: ':robot_face:',
 		text: slackMessage,
-	}))
+	}));
+})
+.catch((err) => {
+	throw err;
 });

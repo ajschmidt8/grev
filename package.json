@@ -1,6 +1,10 @@
 {
 	"name": "grev",
+<<<<<<< HEAD
 	"version": "1.0.5",
+=======
+	"version": "1.0.6",
+>>>>>>> ecb8920e29baa02bfc9606251f605691a2ff6282
 	"description": "This tool exists to simplify the review process at RB.",
 	"keywords": [
 		"jira",
@@ -25,13 +29,16 @@
 	"dependencies": {
 		"axios": "^0.17.0",
 		"chalk": "^2.3.0",
+		"file-name": "^0.1.0",
 		"fuzzy": "^0.1.3",
-		"git-repo-name": "^0.6.0",
+		"git-remote-origin-url": "^2.0.0",
 		"git-rev-sync": "^1.9.1",
 		"inquirer": "^3.3.0",
 		"inquirer-autocomplete-prompt": "^0.11.1",
 		"lodash.intersection": "^4.4.0",
+		"opn": "^5.2.0",
 		"parse-git-config": "^1.1.1",
-		"tmp": "^0.0.33"
+		"tmp": "^0.0.33",
+		"url": "^0.11.0"
 	}
 }
