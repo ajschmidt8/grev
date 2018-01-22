@@ -8,14 +8,14 @@ _As of right now, grev is only designed to work for Recovery Brands. You can for
 
 `grev` uses [Inquirer.js](https://github.com/SBoudrias/Inquirer.js/) to prompt the user for input and perform the following actions:
 
-1. Prompts the user for whether they would like to submit a pull-request (PR) to the source repo or a fork (gets available repos from GitHub API).
-2. Prompts the user for the base branch (gets available branches from GitHub API).
+1. Prompts the user for whether they would like to submit a pull-request (PR) to the source repo or a fork (gets available forks via GitHub API).
+2. Prompts the user for the base branch (gets available branches via GitHub API).
 3. Opens up browser to allow for code changes to be reviewed against base branch.
 4. Prompts user for whether or not they would like to proceed after viewing changes. If yes, `grev` continues. If no, `grev` exits.
 5. Opens up user's default code editor (as configured in next section) so they can enter PR body (in markdown format) for GitHub. The code editor will already have inserted a link to the JIRA task for convenience. `grev` will continue once code editor is closed.
 6. Submits the PR to GitHub and posts the PR link in both the terminal window and as a comment in the JIRA task.
 7. Prompts the user for whether they would like to transition the JIRA task status to _In Review_.
-8. Prompts the user for which co-workers in Slack they would like to notifiy about the PR (pulls users from Slack API).
+8. Prompts the user for which co-workers in Slack they would like to notifiy about the PR (pulls users via Slack API).
 9. Posts a link to the GitHub PR in the `frontend-prs` Slack channel and tags the users specified in the previous step.
 
 ## Installation and Use
