@@ -6,7 +6,17 @@ Grev (_gee-rev_, short for _git review_) is a command line utility that streamli
 
 _As of right now, grev is only designed to work for Recovery Brands. You can fork this repo and edit [config.js](config.js) to make it work for your own company. You will also need to make sure your JIRA transition IDs are configured accordingly._
 
-Grev starts by identifying the name of the current repository you are working on. It then prompts the user for whose repo (i.e. _referralsolutionsgroup_'s or someone's fork) they would like to submit a pull-request (PR) to. Next, it prompts the user to select a base branch for the PR (this branch list is populated by using the previously selected repo and GitHub's API). Next, grev will open up your preferred code editor (specified in your global `.gitconfig` file, described in following section) where you can enter the text for your PR. The code editor will already have inserted a link to the JIRA task for convenience. When the code editor is closed, grev will submit the PR to GitHub, post the link in the terminal, and comment the JIRA task with the GitHub PR link. Next, grev will ask the user if they would like to transition the JIRA task to _In Review_. Then, grev will ask which members you would like to notify about the PR in Slack (pulled from the `prsChannelId` value in [config.js](config.js) via Slack API). Finally, grev notifies those members in Slack.
+`grev` uses [Inquirer.js](https://github.com/SBoudrias/Inquirer.js/) to prompt the user for input and perform the following actions:
+
+1. Prompts the user for whether they would like to submit a pull-request (PR) to the source repo or a fork (gets available repos from GitHub API).
+2. Prompts the user for the base branch (gets available branches from GitHub API).
+3. Opens up browser to allow for code changes to be reviewed against base branch.
+4. Prompts user for whether or not they would like to proceed after viewing changes. If yes, `grev` continues. If no, `grev` exits.
+5. Opens up user's default code editor (as configured in next section) so they can enter PR body (in markdown format) for GitHub. The code editor will already have inserted a link to the JIRA task for convenience. `grev` will continue once code editor is closed.
+6. Submits the PR to GitHub and posts the PR link in both the terminal window and as a comment in the JIRA task.
+7. Prompts the user for whether they would like to transition the JIRA task status to _In Review_.
+8. Prompts the user for which co-workers in Slack they would like to notifiy about the PR (pulls users from Slack API).
+9. Posts a link to the GitHub PR in the `frontend-prs` Slack channel and tags the users specified in the previous step.
 
 ## Installation and Use
 
