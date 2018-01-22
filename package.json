@@ -1,10 +1,6 @@
 {
 	"name": "grev",
-<<<<<<< HEAD
-	"version": "1.0.5",
-=======
 	"version": "1.0.6",
->>>>>>> ecb8920e29baa02bfc9606251f605691a2ff6282
 	"description": "This tool exists to simplify the review process at RB.",
 	"keywords": [
 		"jira",
