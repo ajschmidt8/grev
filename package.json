@@ -1,6 +1,6 @@
 {
 	"name": "grev",
-	"version": "1.0.6",
+	"version": "1.0.7",
 	"description": "This tool exists to simplify the review process at RB.",
 	"keywords": [
 		"jira",
