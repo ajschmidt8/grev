@@ -138,7 +138,7 @@ remoteOriginUrl(executionPath)
 	});
 })
 .then(response => {
-	return apis.slack.post('/conversations.members', querystring.stringify({channel: config.slack.prsChannelId}))
+	return apis.slack.post('/conversations.members', querystring.stringify({channel: config.slack.notificationChannelId}))
 })
 .then(response => {
 	return helpers.getSlackUserInfo(response.data.members);
@@ -165,7 +165,7 @@ remoteOriginUrl(executionPath)
 	const slackMessage = `${prUrlLink} ${slackNotifyeeTags}`;
 
 	return apis.slack.post('/chat.postMessage', querystring.stringify({
-		channel: config.slack.prsChannelId,
+		channel: config.slack.notificationChannelId,
 		as_user: false,
 		username: 'PR Notifier',
 		icon_emoji: ':robot_face:',

@@ -13,7 +13,6 @@ const config = {
 		"self": gitConfig.jira.username,
 		"key": gitConfig.jira.key,
 		"inReviewId": 51,
-		"relatedIssueId": 10003,
 		"url": gitConfig.jira.url
 	},
 
@@ -26,7 +25,7 @@ const config = {
 
 	"slack": {
 		"key": gitConfig.slack.key,
-		"prsChannelId": "G7SCGSSPK",
+		"notificationChannelId": gitConfig.slack.notificationChannelId,
 	}
 };
 
