@@ -91,7 +91,7 @@ remoteOriginUrl(executionPath)
 	const taskTitle = response.data.fields.summary;
 	const prTitle = `[${currentTask}] - ${taskTitle}`;
 
-	fs.writeFileSync(tempFile.name, `**Task:**\n\nhttps://recoverybrands.atlassian.net/browse/${currentTask}\n\n**Pages:**\n\n`);
+	fs.writeFileSync(tempFile.name, `**Task:**\n\n${config.jira.url}/browse/${currentTask}\n\n**Pages:**\n\n`);
 
 	process.stdout.write(chalk.green('Editing markdown file...'));
 

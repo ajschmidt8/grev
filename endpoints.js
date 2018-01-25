@@ -3,7 +3,7 @@ const config = require('./config');
 
 const endpoints = {
 	"jira": axios.create({
-		baseURL: 'https://recoverybrands.atlassian.net/rest/api/2',
+		baseURL: `${config.jira.url}/rest/api/2`,
 		headers: {'Authorization': `Basic ${config.jira.key}`},
 	}),
 

@@ -41,6 +41,7 @@ Before you can run the tool, you'll need to make sure you have the following ent
 [jira]
     key = YOUR_JIRA_API_KEY
     self = YOUR_JIRA_USERNAME
+    url = RECOVERY_BRANDS_JIRA_URL
 [slack]
     key = YOUR_SLACK_API_KEY
 [core]

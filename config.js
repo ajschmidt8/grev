@@ -14,6 +14,7 @@ const config = {
 		"key": gitConfig.jira.key,
 		"inReviewId": 51,
 		"relatedIssueId": 10003,
+		"url": gitConfig.jira.url
 	},
 
 	"github": {
