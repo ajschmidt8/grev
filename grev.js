@@ -20,17 +20,13 @@ let prOwnerRepo;
 let currentRepo;
 let baseBranch;
 const executionPath = process.cwd();
-// Shortcut for chalk logging.
-const log = console.log;
-// Gets current branch name
 const currentTask = require('git-rev-sync').branch(executionPath);
-// Temp file for markdown
 const tempFile = tmp.fileSync({
 	postfix: '.md',
 });
 
 
-log(chalk.bold.underline('\nFollow the prompts to submit a Pull Request.\n'))
+console.log(chalk.bold.underline('\nFollow the prompts to submit a Pull Request.\n'))
 
 remoteOriginUrl(executionPath)
 .then((url) => {
@@ -72,7 +68,7 @@ remoteOriginUrl(executionPath)
 .then((response) => {
 	baseBranch = response.baseBranch;
 
-	log(chalk.green('Opening browser to compare changes...'));
+	console.log(chalk.green('Opening browser to compare changes...'));
 	opn(`https://github.com/${prOwnerRepo}/${currentRepo}/compare/${baseBranch}...${config.github.self}:${currentTask}`, {wait: false});
 
 	return inquirer.prompt({
@@ -102,7 +98,7 @@ remoteOriginUrl(executionPath)
 	execSync(`${config.github.editor} ${tempFile.name}`);
 	const prBody = fs.readFileSync(tempFile.name, 'utf8');
 
-	log(chalk.green('DONE!'));
+	console.log(chalk.green('DONE!'));
 
 	return apis.github.post(`/repos/${prOwnerRepo}/${currentRepo}/pulls`, {
 		title: prTitle,
@@ -114,7 +110,7 @@ remoteOriginUrl(executionPath)
 .then(response => {
 	prUrlLink = response.data.html_url;
 
-	log(chalk.bold(`PR Submitted: `) + prUrlLink);
+	console.log(chalk.bold(`PR Submitted: `) + prUrlLink);
 
 	return apis.jira.post(`/issue/${currentTask}/comment`, {
 			body: `PR Link: ${prUrlLink}`,
