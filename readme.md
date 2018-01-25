@@ -20,17 +20,7 @@ _As of right now, grev is only designed to work for Recovery Brands. You can for
 
 ## Installation and Use
 
-Grev should be installed as a global npm package:
-
-```javascript
-npm install -g grev
-```
-
-or
-
-```javascript
-yarn global add grev
-```
+### Initial Configuration
 
 Before you can run the tool, you'll need to make sure you have the following entries added to your global `.gitconfig` file (should be located @ `/Users/USERNAME/.gitconfig`):
 
@@ -48,7 +38,35 @@ Before you can run the tool, you'll need to make sure you have the following ent
     editor = code --wait
 ```
 
-After the initial installation and configuration, you're all set to use grev. You'll need to make sure your current working directory is inside of one of RB's site folders and the branch name corresponds with the JIRA task you are working on (i.e. `FE-192`). As long are those requirements are met, you can simply run the following command to initiate grev:
+### Installation
+
+Grev should be installed as a global npm package:
+
+```javascript
+npm install -g grev
+```
+
+or
+
+```javascript
+yarn global add grev
+```
+
+### Use
+
+Make sure your terminal is in one of our site's working directory:
+
+```
+.../releases/2018_01_23_15_03_49/html/wp-content/themes/superThemev3/
+```
+
+Make sure your branch name is the JIRA task you are working on:
+
+```
+FE-192
+```
+
+After you've committed and pushed your last changes to GitHub, run the following command:
 
 ```bash
 grev
