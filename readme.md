@@ -57,7 +57,7 @@ yarn global add grev
 Make sure your terminal is in one of our site's working directory:
 
 ```
-.../releases/2018_01_23_15_03_49/html/wp-content/themes/superThemev3/
+.../wp-content/themes/superThemev3/
 ```
 
 Make sure your branch name is the JIRA task you are working on:
