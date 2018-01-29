@@ -1,8 +1,8 @@
 # Grev
 
-Grev (_gee-rev_, short for _git review_) is a command line utility that streamlines the process of submitting a code review at Recovery Brands. It integrates with JIRA, GitHub, and Slack to transition JIRA task statuses, open a GitHub PR, and notify peer code-reviewers in Slack. Additionally, it contains conveinence features like automatically inserting the JIRA task link in the GitHub PR body and inserting the GitHub PR link in the JIRA task's comment section. Grev works by utilizing each of the previously mentioned services' APIs with the help of InquirerJS for collecting input from the user.
-
 ![Grev Screencast](https://i.imgur.com/CN1LnkL.gif)
+
+Grev (_gee-rev_, short for _git review_) is a command line utility that streamlines the process of submitting a code review at Recovery Brands. It integrates with JIRA, GitHub, and Slack to transition JIRA task statuses, open a GitHub PR, and notify peer code-reviewers in Slack. Additionally, it contains conveinence features like automatically inserting the JIRA task link in the GitHub PR body and inserting the GitHub PR link in the JIRA task's comment section. Grev works by utilizing each of the previously mentioned services' APIs with the help of InquirerJS for collecting input from the user.
 
 ## How It Works
 
